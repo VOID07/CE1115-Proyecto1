@@ -13,6 +13,20 @@ const root = {
   hello: () => 'Hello world!',
 };
 
+// Content Security Policy
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",
+  "style-src 'self' 'unsafe-inline' https://unpkg.com",
+  "img-src 'self' data: https:",
+  "connect-src 'self' https://unpkg.com",
+  "font-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join('; ');
+
 // GraphiQL HTML
 const graphiqlHTML = `
 <!DOCTYPE html>
@@ -20,6 +34,7 @@ const graphiqlHTML = `
   <head>
     <meta charset="utf-8" />
     <title>GraphiQL</title>
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
     <link rel="stylesheet" href="https://unpkg.com/graphiql@1.4.7/graphiql.min.css" />
   </head>
   <body style="margin: 0;">
@@ -53,6 +68,13 @@ const graphiqlHTML = `
 
 // Create HTTP server
 const server = http.createServer((req, res) => {
+  // Set security headers for all responses
+  res.setHeader('Content-Security-Policy', csp);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  
   if (req.method === 'GET' && req.url === '/graphiql') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(graphiqlHTML);
