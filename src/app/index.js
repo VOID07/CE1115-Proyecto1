@@ -1,5 +1,8 @@
 const http = require('http');
 const { graphql, buildSchema } = require('graphql');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 // Define schema
 const schema = buildSchema(`
@@ -13,45 +16,55 @@ const root = {
   hello: () => 'Hello world!',
 };
 
-// Content Security Policy
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",
-  "style-src 'self' 'unsafe-inline' https://unpkg.com",
-  "img-src 'self' data: https:",
-  "connect-src 'self' https://unpkg.com",
-  "font-src 'self' data:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'"
-].join('; ');
+// Generate a nonce for each request
+function generateNonce() {
+  return crypto.randomBytes(16).toString('base64');
+}
 
-// GraphiQL HTML
-const graphiqlHTML = `
+// Create HTTP server
+const server = http.createServer((req, res) => {
+  // Generate unique nonce for this request
+  const nonce = generateNonce();
+
+  // Improved Content Security Policy with nonce
+  const csp = [
+    "default-src 'self'",
+    `script-src 'nonce-${nonce}' 'self'`,
+    `style-src 'nonce-${nonce}' 'self'`,
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests"
+  ].join('; ');
+
+  // GraphiQL HTML with nonce
+  const graphiqlHTML = `
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <title>GraphiQL</title>
-    <meta http-equiv="Content-Security-Policy" content="${csp}">
-
-    <link rel="stylesheet" href="https://unpkg.com/graphiql@1.4.7/graphiql.min.css" />
+    <link rel="stylesheet" href="/lib/graphiql.min.css" nonce="${nonce}" />
   </head>
   <body style="margin: 0;">
     <div id="graphiql" style="height: 100vh;"></div>
     <script
-      crossorigin
-      src="https://unpkg.com/react@17/umd/react.production.min.js"
+      nonce="${nonce}"
+      src="/lib/react.production.min.js"
     ></script>
     <script
-      crossorigin
-      src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"
+      nonce="${nonce}"
+      src="/lib/react-dom.production.min.js"
     ></script>
     <script
-      src="https://unpkg.com/graphiql@1.4.7/graphiql.min.js"
+      nonce="${nonce}"
+      src="/lib/graphiql.min.js"
     ></script>
-    <script>
+    <script nonce="${nonce}">
       const graphQLFetcher = graphQLParams =>
         fetch('/graphql', {
           method: 'post',
@@ -67,8 +80,6 @@ const graphiqlHTML = `
 </html>
 `;
 
-// Create HTTP server
-const server = http.createServer((req, res) => {
   // Set security headers for all responses
   res.setHeader('Content-Security-Policy', csp);
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -92,6 +103,20 @@ const server = http.createServer((req, res) => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
+    });
+  } else if (req.method === 'GET' && req.url.startsWith('/lib/')) {
+    const filePath = path.join(__dirname, '..', '..', req.url);
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      const ext = path.extname(filePath);
+      const contentType = ext === '.js' ? 'application/javascript' : 
+                         ext === '.css' ? 'text/css' : 'text/plain';
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
     });
   } else {
     res.writeHead(404);
