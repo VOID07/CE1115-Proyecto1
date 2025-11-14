@@ -7,6 +7,7 @@ Además, es necesario instalar la versión compose de ambas herramientas para po
 
 En esta documentación se va a utilizar Podman, pero es intercambiable con Docker. Además, se utiliza Brew como administrador de paquetes.
 
+
 1. Instalar [Brew](https://brew.sh)
 
 ``` sh
@@ -18,11 +19,13 @@ En esta documentación se va a utilizar Podman, pero es intercambiable con Docke
 brew install podman podman-compose
 ```
 
+
 3. Instalar Podman Desktop (opcional): https://podman-desktop.io/
 
 4. Crear VM de Podman (se indica que no existe al ejecutar los siguientes comandos)
 
 5. Construir la imagen de GraphQL y construir la imagen de Podman Compose.
+
 ```
 podman build ./src/app && \
 podman compose build
@@ -44,6 +47,7 @@ podman compose down
 
 ### Requisitos adicionales
 Para ejecutar correctamente los contenedores, es necesario crear un archivo `.env` en la raíz del proyecto con los siguientes valores:
+
 ``` sh
 POSTGRES_USER=<custom_user>
 POSTGRES_PASSWORD=<custom_password>

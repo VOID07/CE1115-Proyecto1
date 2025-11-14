@@ -35,6 +35,7 @@ const graphiqlHTML = `
     <meta charset="utf-8" />
     <title>GraphiQL</title>
     <meta http-equiv="Content-Security-Policy" content="${csp}">
+
     <link rel="stylesheet" href="https://unpkg.com/graphiql@1.4.7/graphiql.min.css" />
   </head>
   <body style="margin: 0;">
@@ -74,7 +75,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  
+
   if (req.method === 'GET' && req.url === '/graphiql') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(graphiqlHTML);
